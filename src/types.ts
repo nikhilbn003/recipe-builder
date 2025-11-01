@@ -1,4 +1,4 @@
-// // src/types.ts
+
 // export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 // export type Ingredient = {
@@ -33,38 +33,40 @@
 //   createdAt: string;
 //   updatedAt: string;
 // };
-export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
-export type Ingredient = {
+
+// src/types.ts
+export interface Ingredient {
   id: string;
   name: string;
   quantity: number;
   unit: string;
-};
+}
 
-export type CookSettings = {
-  temperature: number;
-  speed: number;
-};
+export type Difficulty = "Easy" | "Medium" | "Hard";
 
-export type RecipeStep = {
+export interface CookingSettings {
+  temperature: number; // °C
+  speed: number; // 1–5
+}
+
+export interface RecipeStep {
   id: string;
   description: string;
-  type: 'cooking' | 'instruction';
+  type: "instruction" | "cooking";
   durationMinutes: number;
-  cookingSettings?: CookSettings;
   ingredientIds?: string[];
-};
+  cookingSettings?: CookingSettings;
+}
 
-export type Recipe = {
+export interface Recipe {
   id: string;
   title: string;
   cuisine?: string;
   difficulty: Difficulty;
   ingredients: Ingredient[];
-  steps: RecipeStep[];
+  steps: RecipeStep[]; // ✅ Use rich objects, not strings
   isFavorite?: boolean;
   createdAt: string;
   updatedAt: string;
-};
-
+}

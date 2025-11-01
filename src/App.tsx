@@ -27,8 +27,11 @@ const App = () => {
         <Route path="*" element={<h2>404 - Not Found</h2>} />
       </Routes>
 
+      <MiniPlayer recipes={recipes} />
     </>
   );
 };
 
 export default App;
+
+

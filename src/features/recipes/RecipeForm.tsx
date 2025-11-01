@@ -45,33 +45,30 @@ export default function RecipeForm() {
   };
 
   const validateRecipe = (): string | null => {
-    if (!recipe.title.trim()) return 'Recipe title is required.';
+    if (!recipe.title.trim()) return '❌ Recipe title is required.';
     if (recipe.title.trim().length < 3)
-      return 'Recipe title must be at least 3 characters.';
+      return '❌ Recipe title must be at least 3 characters.';
     if (recipe.ingredients.length < 1)
-      return 'At least one ingredient is required.';
-    if (recipe.steps.length < 1) return 'At least one step is required.';
-
+      return '❌ Please add at least one ingredient.';
+    if (recipe.steps.length < 1)
+      return '❌ Please add at least one step.';
     for (const step of recipe.steps) {
       if (step.durationMinutes <= 0)
-        return 'Each step must have a duration greater than 0.';
-
+        return '❌ Each step must have a duration greater than 0.';
       if (step.type === 'cooking') {
         if (!step.cookingSettings)
-          return 'Cooking steps must include temperature and speed.';
+          return '❌ Cooking steps must include temperature and speed.';
         const { temperature, speed } = step.cookingSettings;
         if (temperature < 40 || temperature > 200)
-          return 'Temperature must be between 40 and 200°C.';
+          return '❌ Temperature must be between 40 and 200°C.';
         if (speed < 1 || speed > 5)
-          return 'Speed must be between 1 and 5.';
+          return '❌ Speed must be between 1 and 5.';
       }
-
       if (step.type === 'instruction') {
         if (!step.ingredientIds?.length)
-          return 'Instruction steps must reference at least one ingredient.';
+          return '❌ Instruction steps must reference at least one ingredient.';
       }
     }
-
     return null;
   };
 
@@ -82,16 +79,16 @@ export default function RecipeForm() {
       return;
     }
 
-    const formattedRecipe = {
+    const formattedRecipe: Recipe = {
       ...recipe,
-      steps: recipe.steps.map((s) => s.description || ''),
+      updatedAt: new Date().toISOString(),
     };
 
     dispatch(addRecipe(formattedRecipe));
     setMessage('✅ Recipe saved successfully!');
     console.log('✅ Recipe saved:', recipe);
 
-    // reset form
+    // Reset form
     setRecipe({
       id: uuid(),
       title: '',
@@ -104,35 +101,44 @@ export default function RecipeForm() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Create Recipe</h2>
+    <div style={styles.container}>
+      <h2 style={styles.heading}>🍳 Create a New Recipe</h2>
 
-      <input
-        type="text"
-        placeholder="Recipe Title"
-        value={recipe.title}
-        onChange={(e) => setRecipe({ ...recipe, title: e.target.value })}
-      />
+      <div style={styles.formGroup}>
+        <label style={styles.label}>Recipe Title</label>
+        <input
+          type="text"
+          placeholder="e.g., Chocolate Cake"
+          value={recipe.title}
+          onChange={(e) => setRecipe({ ...recipe, title: e.target.value })}
+          style={styles.input}
+        />
+      </div>
 
-      <select
-        value={recipe.difficulty}
-        onChange={(e) =>
-          setRecipe({
-            ...recipe,
-            difficulty: e.target.value as Recipe['difficulty'],
-          })
-        }
-      >
-        <option value="Easy">Easy</option>
-        <option value="Medium">Medium</option>
-        <option value="Hard">Hard</option>
-      </select>
+      <div style={styles.formGroup}>
+        <label style={styles.label}>Difficulty</label>
+        <select
+          value={recipe.difficulty}
+          onChange={(e) =>
+            setRecipe({
+              ...recipe,
+              difficulty: e.target.value as Recipe['difficulty'],
+            })
+          }
+          style={styles.select}
+        >
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
 
-      <h3>Ingredients</h3>
+      <h3 style={styles.subheading}>🥕 Ingredients</h3>
       {recipe.ingredients.map((ing) => (
-        <div key={ing.id}>
+        <div key={ing.id} style={styles.ingredientRow}>
+          <label style={styles.inlineLabel}>Name</label>
           <input
-            placeholder="Name"
+            placeholder="e.g., Sugar"
             value={ing.name}
             onChange={(e) =>
               setRecipe({
@@ -142,10 +148,12 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.smallInput}
           />
+          <label style={styles.inlineLabel}>Qty</label>
           <input
             type="number"
-            placeholder="Qty"
+            placeholder="e.g., 100"
             value={ing.quantity}
             onChange={(e) =>
               setRecipe({
@@ -157,9 +165,11 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.smallInput}
           />
+          <label style={styles.inlineLabel}>Unit</label>
           <input
-            placeholder="Unit"
+            placeholder="g / ml / pcs"
             value={ing.unit}
             onChange={(e) =>
               setRecipe({
@@ -169,16 +179,20 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.smallInput}
           />
         </div>
       ))}
-      <button onClick={addIngredient}>Add Ingredient</button>
+      <button onClick={addIngredient} style={styles.button}>
+        ➕ Add Ingredient
+      </button>
 
-      <h3>Steps</h3>
+      <h3 style={styles.subheading}>📝 Steps</h3>
       {recipe.steps.map((step) => (
-        <div key={step.id}>
+        <div key={step.id} style={styles.stepBlock}>
+          <label style={styles.label}>Step Description</label>
           <textarea
-            placeholder="Description"
+            placeholder="Describe the step..."
             value={step.description}
             onChange={(e) =>
               setRecipe({
@@ -188,8 +202,10 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.textarea}
           />
 
+          <label style={styles.label}>Step Type</label>
           <select
             value={step.type}
             onChange={(e) =>
@@ -202,14 +218,16 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.select}
           >
             <option value="instruction">Instruction</option>
             <option value="cooking">Cooking</option>
           </select>
 
+          <label style={styles.label}>Duration (minutes)</label>
           <input
             type="number"
-            placeholder="Duration (minutes)"
+            placeholder="e.g., 5"
             value={step.durationMinutes}
             onChange={(e) =>
               setRecipe({
@@ -221,14 +239,14 @@ export default function RecipeForm() {
                 ),
               })
             }
+            style={styles.input}
           />
 
-          {/* ✅ Ingredient selector for instruction steps */}
           {step.type === 'instruction' && (
-            <div style={{ marginTop: 10 }}>
-              <label>Select ingredients used:</label>
+            <div>
+              <label style={styles.label}>Select Ingredients Used</label>
               {recipe.ingredients.map((ing) => (
-                <label key={ing.id} style={{ display: 'block' }}>
+                <label key={ing.id} style={styles.checkboxLabel}>
                   <input
                     type="checkbox"
                     checked={step.ingredientIds?.includes(ing.id) || false}
@@ -255,12 +273,12 @@ export default function RecipeForm() {
             </div>
           )}
 
-          {/* ✅ Cooking settings for cooking steps */}
           {step.type === 'cooking' && (
-            <div style={{ marginTop: 10 }}>
+            <div>
+              <label style={styles.label}>Temperature (°C)</label>
               <input
                 type="number"
-                placeholder="Temperature (°C)"
+                placeholder="e.g., 180"
                 value={step.cookingSettings?.temperature ?? ''}
                 onChange={(e) =>
                   setRecipe({
@@ -279,10 +297,13 @@ export default function RecipeForm() {
                     ),
                   })
                 }
+                style={styles.smallInput}
               />
+
+              <label style={styles.label}>Speed</label>
               <input
                 type="number"
-                placeholder="Speed"
+                placeholder="e.g., 2"
                 value={step.cookingSettings?.speed ?? ''}
                 onChange={(e) =>
                   setRecipe({
@@ -302,16 +323,22 @@ export default function RecipeForm() {
                     ),
                   })
                 }
+                style={styles.smallInput}
               />
             </div>
           )}
         </div>
       ))}
 
-      <button onClick={addStep}>Add Step</button>
+      <button onClick={addStep} style={styles.button}>
+        ➕ Add Step
+      </button>
 
-      <hr />
-      <button onClick={handleSubmit}>Save Recipe</button>
+      <hr style={{ margin: '20px 0' }} />
+
+      <button onClick={handleSubmit} style={styles.saveButton}>
+        💾 Save Recipe
+      </button>
 
       {message && (
         <p
@@ -327,3 +354,79 @@ export default function RecipeForm() {
     </div>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    padding: '20px',
+    maxWidth: 600,
+    margin: '0 auto',
+    background: '#fafafa',
+    borderRadius: 8,
+  },
+  heading: { textAlign: 'center', marginBottom: 20 },
+  subheading: { marginTop: 20 },
+  formGroup: { marginBottom: 15 },
+  label: { display: 'block', fontWeight: 500, marginBottom: 4 },
+  inlineLabel: { marginLeft: 8 },
+  input: {
+    width: '100%',
+    padding: '6px',
+    borderRadius: 4,
+    border: '1px solid #ccc',
+  },
+  select: {
+    width: '100%',
+    padding: '6px',
+    borderRadius: 4,
+    border: '1px solid #ccc',
+  },
+  textarea: {
+    width: '100%',
+    height: 60,
+    padding: 6,
+    borderRadius: 4,
+    border: '1px solid #ccc',
+  },
+  smallInput: {
+    width: 100,
+    marginRight: 8,
+    padding: '4px',
+    borderRadius: 4,
+    border: '1px solid #ccc',
+  },
+  ingredientRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
+  stepBlock: {
+    padding: 10,
+    marginBottom: 15,
+    background: '#fff',
+    borderRadius: 6,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  },
+  button: {
+    padding: '6px 10px',
+    background: '#ddd',
+    border: 'none',
+    borderRadius: 4,
+    cursor: 'pointer',
+    marginTop: 6,
+  },
+  saveButton: {
+    width: '100%',
+    padding: '10px',
+    background: '#000',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  checkboxLabel: {
+    display: 'block',
+    marginLeft: 10,
+  },
+};

@@ -1,11 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-
-export interface Recipe {
-  id: string;
-  title: string;
-  steps: string[];
-}
+import type { Recipe } from "../../types";
 
 interface RecipeState {
   list: Recipe[];

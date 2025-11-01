@@ -160,10 +160,11 @@ export default function RecipeForm() {
                 ...recipe,
                 ingredients: recipe.ingredients.map((x) =>
                   x.id === ing.id
-                    ? { ...x, quantity: Number(e.target.value) }
+                    ? { ...x, quantity: Math.max(0, Number(e.target.value)) }
                     : x
                 ),
               })
+              
             }
             style={styles.smallInput}
           />
@@ -234,7 +235,7 @@ export default function RecipeForm() {
                 ...recipe,
                 steps: recipe.steps.map((s) =>
                   s.id === step.id
-                    ? { ...s, durationMinutes: Number(e.target.value) }
+                    ? { ...s, durationMinutes:Math.max(0,  Number(e.target.value)) }
                     : s
                 ),
               })
@@ -289,7 +290,7 @@ export default function RecipeForm() {
                             ...s,
                             cookingSettings: {
                               ...s.cookingSettings,
-                              temperature: Number(e.target.value),
+                              temperature: Math.max(0, Number(e.target.value)),
                               speed: s.cookingSettings?.speed ?? 1,
                             },
                           }
@@ -314,7 +315,7 @@ export default function RecipeForm() {
                             ...s,
                             cookingSettings: {
                               ...s.cookingSettings,
-                              speed: Number(e.target.value),
+                              speed: Math.max(0,Number(e.target.value)),
                               temperature:
                                 s.cookingSettings?.temperature ?? 40,
                             },

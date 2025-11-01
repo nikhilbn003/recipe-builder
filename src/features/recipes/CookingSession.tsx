@@ -1,163 +1,240 @@
-import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
-import type { RootState } from "../../app/store";
+import React, { useEffect } from "react";
 import {
   Box,
   Button,
   Typography,
   LinearProgress,
+  Chip,
+  CircularProgress,
+  Stack,
   Divider,
-  Card,
-  CardContent,
 } from "@mui/material";
+import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../app/store";
+import {
+  startSession,
+  pauseResume,
+  stopSession,
+  tickSecond,
+} from "../session/sessionSlice";
 
-const CookingSession = () => {
-  const { id } = useParams();
+export default function CookingSession() {
+  const { id } = useParams<{ id: string }>();
+  const dispatch = useDispatch();
+
   const recipe = useSelector((s: RootState) =>
     s.recipes.list.find((r) => r.id === id)
   );
+  const session = useSelector((s: RootState) =>
+    id ? s.session.byRecipeId[id] : undefined
+  );
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-
+  // Global ticking
   useEffect(() => {
-    if (recipe) {
-      setProgress(((stepIndex + 1) / recipe.steps.length) * 100);
-    }
-  }, [stepIndex, recipe]);
+    if (!session?.isRunning) return;
+    const interval = setInterval(() => {
+      dispatch(tickSecond({ recipeId: id! }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [session?.isRunning, dispatch, id]);
 
   if (!recipe) return <Typography>Recipe not found</Typography>;
 
-  const currentStep = recipe.steps[stepIndex];
+  const steps = recipe.steps || [];
+  const currentIndex = session?.currentStepIndex ?? 0;
+  const currentStep = steps[currentIndex];
+  const totalDurationSec = steps.reduce(
+    (sum, s) => sum + (s.durationMinutes || 0) * 60,
+    0
+  );
 
-  // Helper: Get ingredients linked to this step
+  const stepDurationSec = (currentStep?.durationMinutes || 0) * 60;
+  const stepRemainingSec = session?.stepRemainingSec ?? stepDurationSec;
+  const stepElapsedSec = Math.max(0, stepDurationSec - stepRemainingSec);
+  const stepProgressPercent =
+    stepDurationSec > 0
+      ? Math.round((stepElapsedSec / stepDurationSec) * 100)
+      : 0;
+
+  const overallRemainingSec = session?.overallRemainingSec ?? totalDurationSec;
+  const overallElapsedSec = totalDurationSec - overallRemainingSec;
+  const overallProgressPercent =
+    totalDurationSec > 0
+      ? Math.round((overallElapsedSec / totalDurationSec) * 100)
+      : 0;
+
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  // Map ingredientIds to actual ingredients
   const stepIngredients =
-    currentStep.type === "instruction"
-      ? recipe.ingredients.filter((ing) =>
-          currentStep.ingredientIds?.includes(ing.id)
-        )
-      : [];
+    currentStep?.ingredientIds?.map((id) =>
+      recipe.ingredients.find((ing) => ing.id === id)
+    ).filter(Boolean) || [];
 
   return (
-    <Box sx={{ p: 3, pb: 12 /* bottom padding for mini-player */ }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        {recipe.title}
-      </Typography>
+    <Box sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
+      {/* Header */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="h4">{recipe.title}</Typography>
+        <Stack direction="row" spacing={1}>
+          <Chip label={recipe.difficulty || "Medium"} color="info" />
+          <Chip
+            label={`Total: ${Math.round(totalDurationSec / 60)} min`}
+            color="default"
+          />
+         <Chip
+  label={recipe.isFavorite ? "★ Favorite" : "☆ Favorite"}
+  color={recipe.isFavorite ? "warning" : "default"}
+/>
 
-      <Typography variant="subtitle1" color="text.secondary">
-        Difficulty: {recipe.difficulty}
-      </Typography>
+        </Stack>
+      </Stack>
 
-      <Divider sx={{ my: 2 }} />
+      <Divider sx={{ my: 3 }} />
 
-      <Typography variant="h6" gutterBottom>
-        Step {stepIndex + 1} of {recipe.steps.length}
-      </Typography>
-
-      <Card variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {currentStep.description || "No description provided."}
+      {/* Active Step Panel */}
+      {currentStep ? (
+        <>
+          <Typography variant="h6">
+            Step {currentIndex + 1} of {steps.length}
           </Typography>
+          <Typography sx={{ mt: 1 }}>{currentStep.description}</Typography>
 
-          {/* Instruction Step */}
-          {currentStep.type === "instruction" && stepIngredients.length > 0 && (
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                🧂 Ingredients used:
-              </Typography>
-              {stepIngredients.map((ing) => (
-                <Typography key={ing.id} variant="body2">
-                  • {ing.name} — {ing.quantity} {ing.unit}
-                </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              mt: 2,
+              gap: 2,
+            }}
+          >
+            <CircularProgress
+              variant="determinate"
+              value={stepProgressPercent}
+              size={60}
+            />
+            <Typography>
+              {formatTime(stepRemainingSec)} / {formatTime(stepDurationSec)}
+            </Typography>
+          </Box>
+
+          {/* Context chips */}
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            {currentStep.type === "cooking" && currentStep.cookingSettings && (
+              <>
+                <Chip
+                  label={`🔥 ${currentStep.cookingSettings.temperature}°C`}
+                  color="error"
+                />
+                <Chip
+                  label={`⚙️ Speed: ${currentStep.cookingSettings.speed}`}
+                  color="info"
+                />
+              </>
+            )}
+            {currentStep.type === "instruction" &&
+              stepIngredients.map((ing) => (
+                <Chip
+                  key={ing!.id}
+                  label={`${ing!.name} – ${ing!.quantity}${ing!.unit}`}
+                  variant="outlined"
+                />
               ))}
-            </Box>
-          )}
+          </Stack>
+        </>
+      ) : (
+        <Typography>No steps found.</Typography>
+      )}
 
-          {/* Cooking Step */}
-          {currentStep.type === "cooking" && currentStep.cookingSettings && (
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                🍳 Cooking Settings:
-              </Typography>
-              <Typography variant="body2">
-                Temperature: {currentStep.cookingSettings.temperature}°C
-              </Typography>
-              <Typography variant="body2">
-                Speed: {currentStep.cookingSettings.speed}
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+      {/* Buttons */}
+      <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+        {!session && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() =>
+              dispatch(
+                startSession({
+                  recipeId: id!,
+                  totalDurationSec,
+                  steps: steps.map((s) => ({ durationMinutes: s.durationMinutes })),
+                })
+              )
+            }
+          >
+            Start Session
+          </Button>
+        )}
 
-      <LinearProgress
-        variant="determinate"
-        value={progress}
-        sx={{
-          height: 10,
-          borderRadius: 5,
-          mb: 3,
-        }}
-      />
+        {session && (
+          <>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => dispatch(pauseResume(id!))}
+            >
+              {session.isRunning ? "Pause" : "Resume"}
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => dispatch(stopSession({ recipeId: id! }))}
+            >
+              STOP
+            </Button>
+          </>
+        )}
+      </Stack>
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-        <Button
-          variant="outlined"
-          disabled={stepIndex === 0}
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="contained"
-          disabled={stepIndex >= recipe.steps.length - 1}
-          onClick={() => setStepIndex((i) => i + 1)}
-        >
-          Next Step
-        </Button>
+      {/* Timeline */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6">Timeline</Typography>
+        <Box sx={{ mt: 1 }}>
+          {steps.map((s, i) => {
+            const duration = `${s.durationMinutes || 0} min`;
+            let status: "Completed" | "Current" | "Upcoming" = "Upcoming";
+            if (i < currentIndex) status = "Completed";
+            else if (i === currentIndex) status = "Current";
+
+            return (
+              <Box
+                key={i}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  py: 0.5,
+                  opacity: status === "Upcoming" ? 0.5 : 1,
+                }}
+              >
+                <Typography>
+                  {i + 1}. {s.shortTitle || s.description?.slice(0, 20)}
+                </Typography>
+                <Typography>
+                  {duration} — <b>{status}</b>
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
 
-      {/* === Mini Player Fixed at Bottom === */}
-      <Box
-        sx={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          width: "100%",
-          bgcolor: "#fff",
-          borderTop: "1px solid #ddd",
-          boxShadow: "0 -2px 10px rgba(0,0,0,0.05)",
-          p: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          zIndex: 999,
-        }}
-      >
-        <Box>
-          <Typography variant="subtitle2">
-            🎧 Step {stepIndex + 1}:{" "}
-            {currentStep.description
-              ? currentStep.description.slice(0, 40)
-              : "Audio Guide"}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {recipe.title}
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => setIsPlaying((p) => !p)}
-        >
-          {isPlaying ? "⏸ Pause" : "▶️ Play"}
-        </Button>
+      {/* Overall Progress */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="body1" sx={{ mb: 1 }}>
+          Overall Remaining: {formatTime(overallRemainingSec)} (
+          {overallProgressPercent}%)
+        </Typography>
+        <LinearProgress
+          variant="determinate"
+          value={overallProgressPercent}
+          sx={{ height: 10, borderRadius: 2 }}
+        />
       </Box>
     </Box>
   );
-};
-
-export default CookingSession;
+}

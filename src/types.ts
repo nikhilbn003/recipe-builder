@@ -57,6 +57,7 @@ export interface RecipeStep {
   durationMinutes: number;
   ingredientIds?: string[];
   cookingSettings?: CookingSettings;
+   shortTitle?: string; // <-- add this
 }
 
 export interface Recipe {

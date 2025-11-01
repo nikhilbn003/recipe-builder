@@ -92,7 +92,12 @@ const sessionSlice = createSlice({
         state.activeRecipeId = null;
       }
     },
-
+     resetSession: (state, action: PayloadAction<{ recipeId: string }>) => {
+      delete state.byRecipeId[action.payload.recipeId];
+      if (state.activeRecipeId === action.payload.recipeId) {
+        state.activeRecipeId = null;
+      }
+    },
     stopSession: (state, action: PayloadAction<{ recipeId: string }>) => {
       const session = state.byRecipeId[action.payload.recipeId];
       if (!session) return;
@@ -110,6 +115,7 @@ export const {
   tickSecond,
   endStep,
   stopSession,
+  resetSession,
 } = sessionSlice.actions;
 
 // ✅ Export reducer

@@ -17,7 +17,10 @@ import {
   pauseResume,
   stopSession,
   tickSecond,
+  resetSession,
 } from "../session/sessionSlice";
+
+
 
 export default function CookingSession() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +41,19 @@ export default function CookingSession() {
     }, 1000);
     return () => clearInterval(interval);
   }, [session?.isRunning, dispatch, id]);
+
+  useEffect(() => {
+  if (session?.overallRemainingSec === 0) {
+    // wait 1 sec to let congratulations show
+    const timeout = setTimeout(() => {
+      dispatch(resetSession({ recipeId: id! }));
+    }, 6000);
+    return () => clearTimeout(timeout);
+  }
+  
+}, [session?.overallRemainingSec, dispatch, id]);
+
+
 
   if (!recipe) return <Typography>Recipe not found</Typography>;
 
@@ -84,9 +100,10 @@ export default function CookingSession() {
         <Stack direction="row" spacing={1}>
           <Chip label={recipe.difficulty || "Medium"} color="info" />
           <Chip
-            label={`Total: ${Math.round(totalDurationSec / 60)} min`}
-            color="default"
-          />
+  label={`Total: ${formatTime(totalDurationSec)}`}
+  color="default"
+/>
+
          <Chip
   label={recipe.isFavorite ? "★ Favorite" : "☆ Favorite"}
   color={recipe.isFavorite ? "warning" : "default"}
@@ -148,7 +165,14 @@ export default function CookingSession() {
           </Stack>
         </>
       ) : (
-        <Typography>No steps found.</Typography>
+        <>
+    <Typography variant="h5" color="success.main" sx={{ mt: 2 }}>
+      🎉 Congratulations! You’ve completed the recipe "{recipe.title}".
+    </Typography>
+    <Typography sx={{ mt: 1 }}>
+      You’ve successfully finished all steps — enjoy your creation! 🍽️
+    </Typography>
+  </>
       )}
 
       {/* Buttons */}
@@ -157,15 +181,16 @@ export default function CookingSession() {
           <Button
             variant="contained"
             color="primary"
-            onClick={() =>
-              dispatch(
-                startSession({
-                  recipeId: id!,
-                  totalDurationSec,
-                  steps: steps.map((s) => ({ durationMinutes: s.durationMinutes })),
-                })
-              )
-            }
+         onClick={() => {
+   
+    dispatch(
+      startSession({
+        recipeId: id!,
+        totalDurationSec,
+        steps: steps.map((s) => ({ durationMinutes: s.durationMinutes })),
+      })
+    );
+  }}
           >
             Start Session
           </Button>
@@ -175,7 +200,7 @@ export default function CookingSession() {
           <>
             <Button
               variant="contained"
-              color="secondary"
+              color="secondary"   
               onClick={() => dispatch(pauseResume(id!))}
             >
               {session.isRunning ? "Pause" : "Resume"}

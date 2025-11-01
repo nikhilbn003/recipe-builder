@@ -27,9 +27,15 @@ const recipeSlice = createSlice({
     setCurrentCooking(state, action: PayloadAction<string | null>) {
       state.currentCookingId = action.payload;
     },
+    toggleFavorite(state, action: PayloadAction<string>) {
+      const recipe = state.list.find(r => r.id === action.payload);
+      if (recipe) {
+        recipe.isFavorite = !recipe.isFavorite;
+        localStorage.setItem('recipes', JSON.stringify(state.list));
+      }
+    },
   },
 });
 
-export const { addRecipe, deleteRecipe, setCurrentCooking } = recipeSlice.actions;
+export const { addRecipe, deleteRecipe, setCurrentCooking, toggleFavorite } = recipeSlice.actions;
 export default recipeSlice.reducer;
-

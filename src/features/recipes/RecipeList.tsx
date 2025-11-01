@@ -1,35 +1,133 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Button, Typography, Paper } from "@mui/material";
-import { deleteRecipe, setCurrentCooking } from "./recipeSlice";
-import { useAppSelector, useAppDispatch } from "../../app/hooks"; // typed hooks
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Chip,
+  Stack,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+import {
+  deleteRecipe,
+  setCurrentCooking,
+  toggleFavorite,
+} from "./recipeSlice";
+import { useAppSelector, useAppDispatch } from "../../app/hooks";
 
 const RecipeList: React.FC = () => {
-  const recipes = useAppSelector((state) => state.recipes.list); // RootState typed now
+  const recipes = useAppSelector((state) => state.recipes.list);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+
+  // store IDs for which buttons are hidden
+  const [hiddenButtons, setHiddenButtons] = useState<string[]>([]);
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("All");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const handleStartCooking = (id: string) => {
+    setHiddenButtons((prev) => [...prev, id]);
+    dispatch(setCurrentCooking(id));
+    navigate(`/cook/${id}`);
+  };
+
+  // Filter recipes by difficulty
+  let filteredRecipes = recipes.filter((r) =>
+    difficultyFilter === "All" ? true : r.difficulty === difficultyFilter
+  );
+
+  // Sort recipes by total time (ascending/descending)
+  filteredRecipes = filteredRecipes.sort((a, b) => {
+    const aTime = a.steps.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const bTime = b.steps.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+  });
 
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5">Saved Recipes</Typography>
-      {recipes.map((r) => (
-        <Paper key={r.id} sx={{ p: 2, mt: 2 }}>
-          <Typography variant="h6">{r.title}</Typography>
-          <Button
-            variant="contained"
-            sx={{ mr: 1 }}
-            onClick={() => {
-              dispatch(setCurrentCooking(r.id));
-              navigate(`/cook/${r.id}`);
-            }}
+
+      {/* Filters */}
+      <Stack direction="row" spacing={2} sx={{ mt: 2, mb: 2 }}>
+        <FormControl size="small" sx={{ width: 100 }}>
+          <InputLabel>Difficulty</InputLabel>
+          <Select
+            value={difficultyFilter}
+            label="Difficulty"
+            onChange={(e) => setDifficultyFilter(e.target.value)}
           >
-            Start Cooking
-          </Button>
-          <Button color="error" onClick={() => dispatch(deleteRecipe(r.id))}>
-            Delete
-          </Button>
-        </Paper>
-      ))}
+            <MenuItem value="All">All</MenuItem>
+            <MenuItem value="Easy">Easy</MenuItem>
+            <MenuItem value="Medium">Medium</MenuItem>
+            <MenuItem value="Hard">Hard</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small">
+          <InputLabel>Sort by Time</InputLabel>
+          <Select
+            value={sortOrder}
+            label="Sort by Time"
+            onChange={(e) =>
+              setSortOrder(e.target.value as "asc" | "desc")
+            }
+          >
+            <MenuItem value="asc">Ascending</MenuItem>
+            <MenuItem value="desc">Descending</MenuItem>
+          </Select>
+        </FormControl>
+      </Stack>
+
+      {filteredRecipes.map((r) => {
+        const isHidden = hiddenButtons.includes(r.id);
+
+        return (
+          <Paper key={r.id} sx={{ p: 2, mt: 2 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="h6">{r.title}</Typography>
+
+              {/* Favorite chip */}
+              <Chip
+                label={r.isFavorite ? "★ Favorite" : "☆ Favorite"}
+                color={r.isFavorite ? "warning" : "default"}
+                clickable
+                onClick={() => dispatch(toggleFavorite(r.id))}
+              />
+            </Stack>
+
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Difficulty: {r.difficulty || "Medium"} | Total Time:{" "}
+              {r.steps.reduce((sum, s) => sum + (s.durationMinutes || 0), 0)}{" "}
+              min
+            </Typography>
+
+            {!isHidden && (
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => handleStartCooking(r.id)}
+                >
+                  Start Cooking
+                </Button>
+                <Button
+                  color="error"
+                  onClick={() => dispatch(deleteRecipe(r.id))}
+                >
+                  Delete
+                </Button>
+              </Stack>
+            )}
+          </Paper>
+        );
+      })}
     </Box>
   );
 };

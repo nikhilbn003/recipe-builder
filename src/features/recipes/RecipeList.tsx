@@ -49,16 +49,7 @@ const RecipeList: React.FC = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">Saved Recipes</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate("/create")}
-        >
-          Create Recipe
-        </Button>
-      </Stack>
+     
 
       {/* Filters */}
       <Stack direction="row" spacing={2} sx={{ mt: 2, mb: 2 }}>

@@ -90,7 +90,7 @@ const RecipeList: React.FC = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => navigate("/create-recipe")}
+            onClick={() => navigate("/create")}
           >
             Create Recipe
           </Button>
